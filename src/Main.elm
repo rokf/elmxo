@@ -8,7 +8,7 @@ import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Svg.Events exposing (..)
 
-type Msg = Redraw | XOClicked Int Int | Restart
+type Msg = XOClicked Int Int | Restart
 
 type alias Model = {
   pospairs : List (Int, Int, Int),
@@ -65,8 +65,6 @@ toggleXOfield int model =
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
-    Redraw ->
-      (model, Cmd.none)
     XOClicked int val ->
       if val == 0 then
         (model |> (toggleXOfield int) |> swapPlayer, Cmd.none)
@@ -75,19 +73,22 @@ update msg model =
     Restart ->
       (initialModel, Cmd.none)
 
-chooseColor : Int -> String
-chooseColor val =
-  case val of
-    1 -> "red"
-    2 -> "green"
-    _ -> "black"
+chooseShape : Int -> (Int, Int, Int) -> Svg Msg
+chooseShape index other =
+  let
+    (xp,yp,val) = other
+  in
+    case val of
+      1 -> circle [cx (toString (xp+50)), cy (toString (yp+50)), r "30", fill "black", onClick (XOClicked index val)] []
+      2 -> g [x (toString xp), y (toString yp), width "100", height "100", fill "black", onClick (XOClicked index val)] [
+        line [x1 (toString (xp + 20)), y1 (toString (yp + 20)), x2 (toString (xp+80)), y2 (toString (yp+80)), stroke "black", strokeWidth "10"] [],
+        line [x1 (toString (xp + 20)), y1 (toString (yp + 80)), x2 (toString (xp+80)), y2 (toString (yp+20)), stroke "black", strokeWidth "10"] []
+      ]
+      _ -> rect [x (toString xp), y (toString yp), width "100", height "100", fill "white", onClick (XOClicked index val)] []
 
 makeXOblock : Int -> (Int, Int, Int) -> Svg Msg
 makeXOblock index other =
-  let
-   (xp,yp,val) = other
-  in
-    rect [x (toString xp), y (toString yp), width "100", height "100", fill (chooseColor val), onClick (XOClicked index val)] []
+  chooseShape index other
 
 view : Model -> Html Msg
 view model =
