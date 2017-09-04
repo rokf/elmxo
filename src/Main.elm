@@ -4,6 +4,7 @@ module Main exposing (..)
 -- import Html.Attributes exposing (..)
 import Html exposing (Html, div)
 import Html.Events
+import Html.Attributes as Ha
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Svg.Events exposing (..)
@@ -148,11 +149,13 @@ makeXOblock index other =
 
 view : Model -> Html Msg
 view model =
-  div [] [
-    svg [ width "300", height "300", viewBox "0 0 300 300" ]
+  div [Ha.align "center"] [
+    Html.h1 [Ha.align "center"] [Html.text "Tic-Tac-Toe"],
+    svg [ width "300", height "300", (viewBox "0 0 300 300"), (Ha.style [("border", "1px solid black")]) ]
       (List.indexedMap makeXOblock model.pospairs),
-    Html.button [Html.Events.onClick Restart] [ Html.text "Restart" ],
-    div [] [ Html.text (toString model.currentPlayer) ],
-    Html.h2 [] [Html.text (toString model.first)],
-    Html.h2 [] [Html.text (toString model.second)]
+    div [] [ Html.button [Html.Events.onClick Restart] [ Html.text "Restart" ] ],
+    div [Ha.style [("display","flex"), ("width", "20%")]] [
+      Html.h2 [Ha.style [("flex","1")]] [Html.text ("◯ " ++ toString model.first)],
+      Html.h2 [Ha.style [("flex","1")]] [Html.text ("🞫 " ++ toString model.second)]
+    ]
   ]
