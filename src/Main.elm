@@ -8,11 +8,16 @@ import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Svg.Events exposing (..)
 
-type Msg = XOClicked Int Int | Restart
+import Array
+import Task
+
+type Msg = XOClicked Int Int | Restart | CheckWinner
 
 type alias Model = {
   pospairs : List (Int, Int, Int),
-  currentPlayer : Int
+  currentPlayer : Int,
+  first : Int,
+  second : Int
 }
 
 initialModel : Model
@@ -23,7 +28,45 @@ initialModel =
     ,(0,200,0),(100,200,0),(200,200,0)
     ]
   , currentPlayer = 1
+  , first = 0
+  , second = 0
   }
+
+numToWinner : Int -> Winner
+numToWinner int =
+  case int of
+    1 -> First
+    2 -> Second
+    _ -> Noone
+
+extractAndCompare : Array.Array Int -> (Int, Int, Int) -> Winner
+extractAndCompare array (t1, t2, t3) =
+  let
+    fst = Array.get t1 array
+    snd = Array.get t2 array
+    trd = Array.get t3 array
+  in
+    if (fst == snd) && (snd == trd) then
+      case fst of
+        Just x -> numToWinner x
+        Nothing -> Noone -- shouldn't happen
+    else
+      Noone
+
+type Winner = First | Second | Noone
+whoWon : List (Int, Int, Int) -> Winner
+whoWon lst =
+  let
+    array = Array.fromList (List.map (\(v1,v2,v3) -> v3) lst)
+    checks = [
+      (0,1,2),(3,4,5),(6,7,8), -- left-right
+      (0,3,6),(1,4,7),(2,5,8), -- top-down
+      (0,4,8),(2,4,6) -- diagonal
+    ]
+    flst = (List.map (extractAndCompare array) checks) -- final list
+  in
+    if List.member First flst then First else (if List.member Second flst then Second else Noone)
+
 
 init : (Model, Cmd a)
 init =
@@ -62,16 +105,29 @@ toggleXOfield : Int -> Model -> Model
 toggleXOfield int model =
   { model | pospairs = (List.indexedMap (updateFieldValue int model) model.pospairs) }
 
+addFirstPoint : Model -> Model
+addFirstPoint model =
+  { model | first = model.first + 1 }
+
+addSecondPoint : Model -> Model
+addSecondPoint model =
+  { model | second = model.second + 1 }
+
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     XOClicked int val ->
       if val == 0 then
-        (model |> (toggleXOfield int) |> swapPlayer, Cmd.none)
+        (model |> (toggleXOfield int) |> swapPlayer |> update CheckWinner)
       else
         (model, Cmd.none)
+    CheckWinner ->
+      case whoWon model.pospairs of
+        First -> (model |> addFirstPoint |> update Restart)
+        Second -> (model |> addSecondPoint |> update Restart)
+        Noone -> (model, Cmd.none)
     Restart ->
-      (initialModel, Cmd.none)
+      ({ initialModel | first = model.first, second = model.second }, Cmd.none)
 
 chooseShape : Int -> (Int, Int, Int) -> Svg Msg
 chooseShape index other =
@@ -93,8 +149,10 @@ makeXOblock index other =
 view : Model -> Html Msg
 view model =
   div [] [
+    svg [ width "300", height "300", viewBox "0 0 300 300" ]
+      (List.indexedMap makeXOblock model.pospairs),
     Html.button [Html.Events.onClick Restart] [ Html.text "Restart" ],
     div [] [ Html.text (toString model.currentPlayer) ],
-    svg [ width "300", height "300", viewBox "0 0 300 300" ]
-      (List.indexedMap makeXOblock model.pospairs)
+    Html.h2 [] [Html.text (toString model.first)],
+    Html.h2 [] [Html.text (toString model.second)]
   ]
